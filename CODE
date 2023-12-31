@@ -1,0 +1,107 @@
+# Import necessary libraries
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import PassiveAggressiveClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix
+
+# Data Exploration and Preprocessing
+
+def preprocess_data(dataset_path):
+    # Read the dataset
+    df = pd.read_csv("/content/drive/MyDrive/fake_or_real_news.csv")
+    
+    # Display the first few rows of the dataset
+    print("Dataset Overview:")
+    print(df.head())
+    
+    # Check for any missing values
+    print("\nMissing Values:")
+    print(df.isnull().sum())
+    
+    # Drop missing values if any
+    df = df.dropna()
+    
+    # Split the data into features (X) and labels (y)
+    X = df[['title', 'text']]  # Adjust based on your dataset columns
+    y = df['label']
+    
+    # Calculate the percentage of fake and real news
+    fake_percentage = (y.value_counts()[0] / len(y)) * 100
+    real_percentage = (y.value_counts()[1] / len(y)) * 100
+    
+    print(f"\nPercentage of Fake News: {fake_percentage:.2f}%")
+    print(f"Percentage of Real News: {real_percentage:.2f}%")
+    
+    # Split the data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    return X_train, X_test, y_train, y_test
+
+# Text Vectorization
+
+def vectorize_text(X_train, X_test):
+    # Initialize the TF-IDF Vectorizer
+    tfidf_vectorizer = TfidfVectorizer(stop_words='english', max_df=0.7)
+    
+    # Fit and transform the training set
+    tfidf_train = tfidf_vectorizer.fit_transform(X_train['text'])
+    
+    # Transform the test set
+    tfidf_test = tfidf_vectorizer.transform(X_test['text'])
+    
+    return tfidf_train, tfidf_test, tfidf_vectorizer
+
+# Build and Train the Model
+
+def build_train_model(tfidf_train, y_train):
+    # Initialize the PassiveAggressiveClassifier
+    pac = PassiveAggressiveClassifier(max_iter=50)
+    
+    # Train the model
+    pac.fit(tfidf_train, y_train)
+    
+    return pac
+
+# Make Predictions and Evaluate the Model
+
+def make_predictions(model, tfidf_test, y_test):
+    # Predict on the test set
+    y_pred = model.predict(tfidf_test)
+    
+    # Evaluate the model
+    accuracy = accuracy_score(y_test, y_pred)
+    print(f'\nAccuracy: {accuracy:.2f}')
+
+    # Create a confusion matrix
+    conf_matrix = confusion_matrix(y_test, y_pred)
+    print('\nConfusion Matrix:')
+    print(conf_matrix)
+    
+    # Visualize the confusion matrix
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=['Fake', 'Real'], yticklabels=['Fake', 'Real'])
+    plt.xlabel('Predicted Label')
+    plt.ylabel('True Label')
+    plt.title('Confusion Matrix')
+    plt.show()
+
+# Main Execution
+
+# Replace 'your_dataset.csv' with the actual link or filename of your dataset
+dataset_path = 'your_dataset.csv'
+
+# Step 1: Data Preprocessing
+X_train, X_test, y_train, y_test = preprocess_data(dataset_path)
+
+# Step 2: Text Vectorization
+tfidf_train, tfidf_test, tfidf_vectorizer = vectorize_text(X_train, X_test)
+
+# Step 3: Build and Train the Model
+model = build_train_model(tfidf_train, y_train)
+
+# Step 4: Make Predictions and Evaluate the Model
+make_predictions(model, tfidf_test, y_test)
